@@ -1,0 +1,47 @@
+;
+;	File 'CH4.top' was generated
+;	By user: mzwier (1005)
+;	On host: ltc1
+;	At date: Mon Nov 23 18:40:42 2009
+;
+;	This is your topology file
+;	"No One Could Foresee the End That Came So Fast" (Slayer)
+;
+; Include forcefield parameters
+#include "ffG45a3.itp"
+
+[ moleculetype ]
+; Name            nrexcl
+Protein             3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+     1        CH4      1    CH4     CM      1          0     16.043   ; qtot 0
+     2        CH4      2    CH4     CM      2          0     16.043   ; qtot 0
+
+; Include Position restraint file
+#ifdef POSRES
+#include "CH4_res.itp"
+#endif
+
+; Include water topology
+#include "spc.itp"
+
+#ifdef POSRES_WATER
+; Position restraint for each water oxygen
+[ position_restraints ]
+;  i funct       fcx        fcy        fcz
+   1    1       1000       1000       1000
+#endif
+
+; Include generic topology for ions
+#include "ions.itp"
+
+[ system ]
+; Name
+Protein in water
+
+[ molecules ]
+; Compound        #mols
+Protein             1
+SOL               906
