@@ -114,9 +114,12 @@ class WExploreBinMapper(BinMapper):
         # Groupby assignments at the previous level
         for cix, grp in s.groupby(s.values, sort=False):
             # map the 0-based centers index back to a bin index
-            nix = node_indices[cix]
-            observed_nodes.append(nix)
-            G.node[nix]['coord_ix'] = coord_indices[grp.index]
+            try:
+                nix = node_indices[cix]
+                observed_nodes.append(nix)
+                G.node[nix]['coord_ix'] = coord_indices[grp.index]
+            except:
+                pass
 
         return observed_nodes
 
@@ -184,9 +187,11 @@ class WExploreBinMapper(BinMapper):
         graph_hash = self._hash(G)
 
         # Check if we can return cached assigments instead of recalculating
-        if self.last_graph == graph_hash and np.array_equal(coords, self.last_coords) and np.array_equal(mask, self.last_mask):
-            log.debug('assign() using cached assigments')
-            return self.last_assignment
+        #if self.last_graph == graph_hash and np.array_equal(coords, self.last_coords) and np.array_equal(mask, self.last_mask):
+        #    log.debug('assign() using cached assigments')
+        #    output = self.last_assignment
+        #    print("The WExplore mapper has been called, but we are returning cached assignments, which are: " + str(output))
+        #    return output
 
         # List of coordinate indices assigned to each node
         nx.set_node_attributes(G, 'coord_ix', None)
@@ -354,7 +359,10 @@ class WExploreBinMapper(BinMapper):
         # Set min number of replicas for lowest level bin in the hierarchy
         nx.set_node_attributes(G, 'nreplicas', 0)
         for bi in occupied_bins:
-            G.node[self.level_indices[-1][bi]]['nreplicas'] = 1
+            try:
+                G.node[self.level_indices[-1][bi]]['nreplicas'] = 1
+            except:
+                pass
 
         # Accumulate minimum number up the tree
         for top_node in self.level_indices[0]:
