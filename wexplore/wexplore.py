@@ -190,7 +190,6 @@ class WExploreBinMapper(BinMapper):
         #if self.last_graph == graph_hash and np.array_equal(coords, self.last_coords) and np.array_equal(mask, self.last_mask):
         #    log.debug('assign() using cached assigments')
         #    output = self.last_assignment
-        #    print("The WExplore mapper has been called, but we are returning cached assignments, which are: " + str(output))
         #    return output
 
         # List of coordinate indices assigned to each node

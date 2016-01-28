@@ -122,7 +122,7 @@ class WExploreDriver(object):
         #start_index = self.system.bin_mapper.mapper_list[1]['start_index']
         start_index = wexploreMappers[0]['mapper'].start_index
         print("This is the start index! " + str(start_index))
-        self.target_counts(coords=final_pcoords)
+        self.target_counts(coords=final_pcoords, startup=False)
 
         endtime = time.time()
 
@@ -230,13 +230,13 @@ class WExploreDriver(object):
                 wexploreMappers.append(i)
         wexploreMapper = wexploreMappers[0]['base_mapper']
         self.system.initialize_mappers(wexploreMapper)
-        self.target_counts()
+        self.target_counts(startup=False)
         self.we_driver._run_we()
         
         log.debug('used initial states: {!r}'.format(self.we_driver.used_initial_states))
         log.debug('available initial states: {!r}'.format(self.we_driver.avail_initial_states))
 
-    def target_counts(self, coords=None):
+    def target_counts(self, coords=None, startup=True):
         inmapper = []
         segments = []
         #for i in self.we_driver.next_iter_binning:
@@ -253,6 +253,7 @@ class WExploreDriver(object):
                 # This is to handle any target states present; when a simulation is restarted, it resets the target_bin
                 # count to 0.  If it initializes this from the system, the list is generally not long enough.
                 # Setting the counts to 1 shouldn't affect the running simulation.
+                log.warning("Setting target counts to default.")
                 target_counts = [1] * self.system.bin_mapper.nbins
                 self.system.bin_target_counts = target_counts
                 self.we_driver.bin_target_counts = target_counts
