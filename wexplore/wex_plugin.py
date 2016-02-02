@@ -41,7 +41,6 @@ class WExploreDriver(object):
 
         # Register callback
         sim_manager.register_callback(sim_manager.pre_we, self.pre_we, self.priority)
-        #sim_manager.register_callback(sim_manager.run_we, self.run_we, self.priority)
         self.we_driver.register_callback(self.we_driver.post_recycle, self.target_counts, self.priority)
         sim_manager.register_callback(sim_manager.pre_prepare_iteration, self.target_counts, self.priority)
 
@@ -138,108 +137,9 @@ class WExploreDriver(object):
         westpa.rc.pstatus('------------------------------------')
         westpa.rc.pflush()
 
-    def run_we(self):
-        '''Run the weighted ensemble algorithm based on the binning in self.final_bins and
-        the recycled particles in self.to_recycle, creating and committing the next iteration's
-        segments to storage as well.'''
-        
-        # The WE driver now does almost everything; we just have to record the
-        # mapper used for binning this iteration, and update initial states
-        # that have been used
-         
-        try:
-            pickled, hashed = self.we_driver.bin_mapper.pickle_and_hash()
-        except PickleError:
-            pickled = hashed = ''
-
-        self.bin_mapper_hash = hashed
-
-        self.construct_next()
-        
-        if self.we_driver.used_initial_states:
-            for initial_state in self.we_driver.used_initial_states.itervalues():
-                initial_state.iter_used = self.sim_manager.n_iter+1
-            self.data_manager.update_initial_states(self.we_driver.used_initial_states.values())
-            
-        self.data_manager.update_segments(self.sim_manager.n_iter,self.sim_manager.segments.values())
-        
-        self.data_manager.require_iter_group(self.sim_manager.n_iter+1)
-        self.data_manager.save_iter_binning(self.sim_manager.n_iter+1, hashed, pickled, self.we_driver.bin_target_counts)
-        
-        # Report on recycling
-        recycling_events = {}
-        for nw in self.we_driver.new_weights:
-            try:
-                recycling_events[nw.target_state_id].add(nw.weight)
-            except KeyError:
-                recycling_events[nw.target_state_id] = set([nw.weight])
-        
-        tstates_by_id = {state.state_id: state for state in self.we_driver.target_states.itervalues()}
-        for tstate_id, weights in recycling_events.iteritems():
-            tstate = tstates_by_id[tstate_id]
-            self.sim_manager.rc.pstatus('Recycled {:g} probability ({:d} walkers) from target state {!r}'.format(sum(weights),
-                                                                                                     len(weights),
-                                                                                                     tstate.label))
-
-    def construct_next(self):
-        '''Construct walkers for the next iteration, by running weighted ensemble recycling
-        and bin/split/merge on the segments previously assigned to bins using ``assign``.
-        Enough unused initial states must be present in ``self.avail_initial_states`` for every recycled
-        walker to be assigned an initial state.
-        
-        After this function completes, ``self.flux_matrix`` contains a valid flux matrix for this
-        iteration (including any contributions from recycling from the previous iteration), and
-        ``self.next_iter_segments`` contains a list of segments ready for the next iteration,
-        with appropriate values set for weight, endpoint type, parent walkers, and so on.        
-        '''
-        
-        self.we_driver._prep_we()
-        
-        # Create new segments for the next iteration        
-        # We assume that everything is going to continue without being touched by recycling or WE, and
-        # adjust later
-        new_pcoord_array = self.system.new_pcoord_array
-        n_iter = None
-        segments = []
-                
-        for ibin, _bin in enumerate(self.we_driver.final_binning):
-            for segment in _bin:
-                if n_iter is None:
-                    n_iter = segment.n_iter
-                else:
-                    assert segment.n_iter == n_iter
-                    
-                segment.endpoint_type = Segment.SEG_ENDPOINT_CONTINUES
-                new_segment = Segment(n_iter=segment.n_iter+1,
-                                      parent_id=segment.seg_id,
-                                      weight=segment.weight,
-                                      wtg_parent_ids=[segment.seg_id],
-                                      pcoord=new_pcoord_array(),
-                                      status=Segment.SEG_STATUS_PREPARED)
-                new_segment.pcoord[0] = segment.pcoord[-1]
-                self.we_driver.next_iter_binning[ibin].add(new_segment)
-
-                
-                # Store a link to the parent segment, so we can update its endpoint status as we need,
-                # based on its ID
-                self.we_driver._parent_map[segment.seg_id] = segment
-                
-        self.we_driver._recycle_walkers()
-        # We now handle this within the recursive bin mapper.
-        #wexploreMappers = []
-        #for key,i in self.system.bin_mapper.mapper_list.iteritems():
-        #    if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
-        #        wexploreMappers.append(i)
-        #wexploreMapper = wexploreMappers[0]['base_mapper']
-        #self.system.initialize_mappers(wexploreMapper)
-        # Still need to find a useful way to have this automatically happen post recycling.
-        self.target_counts(startup=False)
-        self.we_driver._run_we()
-        
-        log.debug('used initial states: {!r}'.format(self.we_driver.used_initial_states))
-        log.debug('available initial states: {!r}'.format(self.we_driver.avail_initial_states))
 
     def target_counts(self, coords=None, startup=True):
+        log.debug("Updating target counts.")
         inmapper = []
         segments = []
         #for i in self.we_driver.next_iter_binning:
@@ -251,6 +151,7 @@ class WExploreDriver(object):
 
                 for iseg, segment in enumerate(segments):
                     final_pcoords[iseg] = segment.pcoord[0]
+                log.debug("Pulling next iteration segments...")
             except(RuntimeError):
                 # This implies we're calling it to restart an iteration.  We just need to set the appropriate list length.
                 # This is to handle any target states present; when a simulation is restarted, it resets the target_bin
