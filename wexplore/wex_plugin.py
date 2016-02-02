@@ -41,7 +41,8 @@ class WExploreDriver(object):
 
         # Register callback
         sim_manager.register_callback(sim_manager.pre_we, self.pre_we, self.priority)
-        sim_manager.register_callback(sim_manager.run_we, self.run_we, self.priority)
+        #sim_manager.register_callback(sim_manager.run_we, self.run_we, self.priority)
+        self.we_driver.register_callback(self.we_driver.post_recycle, self.target_counts, self.priority)
         sim_manager.register_callback(sim_manager.pre_prepare_iteration, self.target_counts, self.priority)
 
     def init_bin_mapper(self):
@@ -76,7 +77,7 @@ class WExploreDriver(object):
         segments = self.sim_manager.segments.values()
         bin_mapper = self.system.bin_mapper
         wexploreMappers = []
-        for i in self.system.bin_mapper.mapper_list:
+        for key,i in self.system.bin_mapper.mapper_list.iteritems():
             if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
                 wexploreMappers.append(i)
         wexploreMapper = wexploreMappers[0]['base_mapper']
@@ -224,12 +225,14 @@ class WExploreDriver(object):
                 self.we_driver._parent_map[segment.seg_id] = segment
                 
         self.we_driver._recycle_walkers()
-        wexploreMappers = []
-        for i in self.system.bin_mapper.mapper_list:
-            if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
-                wexploreMappers.append(i)
-        wexploreMapper = wexploreMappers[0]['base_mapper']
-        self.system.initialize_mappers(wexploreMapper)
+        # We now handle this within the recursive bin mapper.
+        #wexploreMappers = []
+        #for key,i in self.system.bin_mapper.mapper_list.iteritems():
+        #    if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
+        #        wexploreMappers.append(i)
+        #wexploreMapper = wexploreMappers[0]['base_mapper']
+        #self.system.initialize_mappers(wexploreMapper)
+        # Still need to find a useful way to have this automatically happen post recycling.
         self.target_counts(startup=False)
         self.we_driver._run_we()
         
@@ -264,7 +267,7 @@ class WExploreDriver(object):
 
         assignments = self.system.bin_mapper.assign(final_pcoords)
         wexploreMappers = []
-        for i in self.system.bin_mapper.mapper_list:
+        for key,i in self.system.bin_mapper.mapper_list.iteritems():
             if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
                 wexploreMappers.append(i)
         wexploreMapper = wexploreMappers[0]['base_mapper']
@@ -276,10 +279,10 @@ class WExploreDriver(object):
         assignmentswexplore = wexploreMapper.assign(inmapper)
         target_counts = wexploreMapper.balance_replicas(self.max_replicas, assignmentswexplore)
         total_bins = 0
-        for imapper,mapper in enumerate(self.system.bin_mapper.mapper_list):
+        for imapper,(i,mapper) in enumerate(self.system.bin_mapper.mapper_list.iteritems()):
             total_bins += mapper['mapper'].nbins
         old_list = [0] * total_bins
-        for imapper,mapper in enumerate(self.system.bin_mapper.mapper_list):
+        for imapper,(i,mapper) in enumerate(self.system.bin_mapper.mapper_list.iteritems()):
             start = mapper['start_index']
             nbins = mapper['base_mapper'].nbins
             targetc = mapper['base_mapper'].bin_target_counts
