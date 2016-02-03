@@ -70,16 +70,23 @@ class WExploreDriver(object):
         self.data_manager.close_backing()
 
         return bin_mapper
+    
+    def find_mappers(self):
+        wexploreMappers = []
+        for key,i in self.system.bin_mapper.mapper_list.iteritems():
+            if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
+                wexploreMappers.append(i)
+        self.wexploreMappers = wexploreMappers
+        return self.wexploreMappers
 
     def pre_we(self):
         starttime = time.time()
         segments = self.sim_manager.segments.values()
         bin_mapper = self.system.bin_mapper
-        wexploreMappers = []
-        for key,i in self.system.bin_mapper.mapper_list.iteritems():
-            if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
-                wexploreMappers.append(i)
-        wexploreMapper = wexploreMappers[0]['base_mapper']
+        self.find_mappers()
+
+        # For now, assume one wexploreMapper
+        wexploreMapper = self.wexploreMappers[0]['base_mapper']
 
         final_pcoords = np.empty((len(segments), self.system.pcoord_ndim), dtype=self.system.pcoord_dtype)
 
@@ -92,23 +99,16 @@ class WExploreDriver(object):
 
         # Re-assign segments to new bins if bin_mapper changes
         if wexploreMapper.last_graph != hash_init:
-            # Redo target states.  Actually, this may need to happen later?
+            # The mapper has updated; force an update to the system mapper.
+            bin_mapper.refresh_mappers()
+            self.target_counts()
+
+            # Reset we_driver internal data structures.  This includes sending in the target states,
+            # as the bins have changed (we also need to feed in the initial states).
             target_states = []
-            #self.system.tstates = ['unbound,5.0,1.0']
             tstates = self.system.tstates
             tstates_strio = cStringIO.StringIO('\n'.join(tstates).replace(',', ' '))
             target_states.extend(TargetState.states_from_file(tstates_strio, self.system.pcoord_dtype))
-            self.data_manager.save_target_states(target_states)
-            self.sim_manager.report_target_states(target_states)
-
-            # I think we need to force the mapper to reupdate...
-            bin_mapper = self.system.initialize_mappers(wexploreMapper)
-            # Now, update the local bin mapper.
-            self.we_driver.bin_mapper = bin_mapper
-            self.sim_manager.bin_mapper = bin_mapper
-
-
-            # Reset we_driver internal data structures
             initial_states = []
             for key,value in self.we_driver.avail_initial_states.iteritems():
                 initial_states.append(value)
@@ -117,11 +117,7 @@ class WExploreDriver(object):
             # Re-assign segments
             self.we_driver.assign(segments)
 
-        # Get assignments. Should use cached assignments
-        # We'll pull this from the system, now...
-        #start_index = self.system.bin_mapper.mapper_list[1]['start_index']
-        start_index = wexploreMappers[0]['mapper'].start_index
-        print("This is the start index! " + str(start_index))
+        # Reset target counts to account for new iteration.
         self.target_counts(coords=final_pcoords, startup=False)
 
         endtime = time.time()
@@ -157,7 +153,8 @@ class WExploreDriver(object):
                 # This is to handle any target states present; when a simulation is restarted, it resets the target_bin
                 # count to 0.  If it initializes this from the system, the list is generally not long enough.
                 # Setting the counts to 1 shouldn't affect the running simulation.
-                log.warning("Setting target counts to default.")
+                # This may not matter under certain circumstances.
+                log.debug("Setting target counts to default.")
                 target_counts = [1] * self.system.bin_mapper.nbins
                 self.system.bin_target_counts = target_counts
                 self.we_driver.bin_target_counts = target_counts
@@ -167,12 +164,11 @@ class WExploreDriver(object):
             final_pcoords = coords
 
         assignments = self.system.bin_mapper.assign(final_pcoords)
-        wexploreMappers = []
-        for key,i in self.system.bin_mapper.mapper_list.iteritems():
-            if isinstance(i['base_mapper'], wexplore.WExploreBinMapper) == True:
-                wexploreMappers.append(i)
-        wexploreMapper = wexploreMappers[0]['base_mapper']
-        start_index = wexploreMappers[0]['mapper'].start_index
+        self.find_mappers()
+        # Still assuming only one wexploreMapper
+        wexploreMapper = self.wexploreMappers[0]['base_mapper']
+        # Pulling the 'true' start_index.
+        start_index = self.wexploreMappers[0]['mapper'].start_index
         # Only assign, to the wexploreMapper, those which should fall into it normally.
         for ii,i in enumerate(assignments):
             if i >= start_index and i < start_index + wexploreMapper.nbins:
