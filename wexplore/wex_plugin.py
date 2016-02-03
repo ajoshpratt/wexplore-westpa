@@ -110,6 +110,8 @@ class WExploreDriver(object):
             tstates_strio = cStringIO.StringIO('\n'.join(tstates).replace(',', ' '))
             target_states.extend(TargetState.states_from_file(tstates_strio, self.system.pcoord_dtype))
             initial_states = []
+            self.data_manager.save_target_states(target_states)
+            #self.sim_manager.report_target_states(target_states)
             for key,value in self.we_driver.avail_initial_states.iteritems():
                 initial_states.append(value)
             self.we_driver.new_iteration(target_states=target_states, initial_states=initial_states)
