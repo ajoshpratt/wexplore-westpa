@@ -5,7 +5,10 @@ from scipy.spatial.distance import cdist
 import nose
 import nose.tools
 
+import westpa
+import westtools
 from wexplore import WExploreBinMapper
+from westpa.binning import RectilinearBinMapper, RecursiveBinMapper, FuncBinMapper
 
 coord_dtype = np.float32
 
@@ -19,6 +22,11 @@ def dfunc(coordvec, centers):
 
     return distmat[0,:]
 
+def fn2(coords, mask, output):
+    # Arbitrary function for functional mapper
+    test = coords[:,0] < 10.0
+    output[mask & test] = 0
+    output[mask & ~test] = 1
 
 class TestWExploreBinMapper:
 
@@ -28,6 +36,33 @@ class TestWExploreBinMapper:
         assert bin_mapper.n_levels == 3
         assert bin_mapper.nbins == 0
         assert bin_mapper.max_nbins == 18
+
+    def test_nested_mapper(self):
+        # Tests for nested mapping.  Setting up the system (some arbitrary values, here)
+        wexploreMapper = WExploreBinMapper(n_regions=[4,4,4], d_cut=[2, .75, 0.25], dfunc=dfunc)
+        wexploreMapper.centers = [[2.5, 7.0]]
+        wexploreMapper.add_bin(None, 0)
+
+        outerMapper = FuncBinMapper(fn2,2)
+        recurseMapper = RecursiveBinMapper(outerMapper)
+        RectiMapper = RectilinearBinMapper([[10.00, float('inf')], [0.0, float('inf')]])
+        recurseMapper.add_mapper(wexploreMapper, [9.9, 0])
+        recurseMapper.add_mapper(RectiMapper, [10, 0])
+        bin_mapper = recurseMapper
+        
+        # Now, begin testing setup...
+        assert bin_mapper.nbins == 2
+
+        wexploreMappers = []
+        for key,i in bin_mapper.mapper_list.iteritems():
+            if isinstance(i['base_mapper'], WExploreBinMapper) == True:
+                wexploreMappers.append(i)
+        self.wexploreMappers = wexploreMappers
+        wexploreMappers[0]['base_mapper'].add_bin(0,1)
+
+        bin_mapper.refresh_mappers()
+
+        assert bin_mapper.nbins == 3
 
     def test_add_bin(self):
         bin_mapper = WExploreBinMapper([2, 2, 2], [4.0, 2.0, 1.0], dfunc)

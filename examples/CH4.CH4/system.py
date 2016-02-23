@@ -57,6 +57,7 @@ class System(WESTSystem):
         self.max_replicas = 64
         self.bin_mapper.centers = [[2.5, 7.0]]
         self.tstates = ['unbound,10.0,1.0']
+        self.n_regions = [6,4,4]
 
     def initialize_mappers(self,wexploreMapper):
         self.outerMapper = FuncBinMapper(fn2,2)

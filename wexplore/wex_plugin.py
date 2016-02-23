@@ -94,7 +94,7 @@ class WExploreDriver(object):
             final_pcoords[iseg] = segment.pcoord[-1,:]
 
         hash_init = wexploreMapper.last_graph
-        kwargs = {'add_bins': True}
+        kwargs = {'add_bins': True, 'n_regions': self.system.n_regions}
         assignments = bin_mapper.assign(final_pcoords, **kwargs)
 
         # Re-assign segments to new bins if bin_mapper changes

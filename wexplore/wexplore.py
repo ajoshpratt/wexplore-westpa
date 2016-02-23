@@ -158,8 +158,10 @@ class WExploreBinMapper(BinMapper):
             for k in xrange(self.n_levels):
                 self.level_indices[k] = [nix for nix in self.level_indices[k] if nix not in nodes_remove]
 
-    def assign(self, coords, mask=None, output=None, add_bins=False):
+    def assign(self, coords, mask=None, output=None, add_bins=False, n_regions=None):
         '''Hierarchically assign coordinates to bins'''
+        if n_regions != None:
+            self.n_regions = n_regions
         try:
             passed_coord_dtype = coords.dtype
         except AttributeError:
