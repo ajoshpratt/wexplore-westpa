@@ -23,20 +23,20 @@ WEST_TOOLS: recursive_update
 
 Or, after loading anaconda python:
 
-`git clone https://github.com/westpa/westpa.git`
-`git checkout new_hooks`
-`./setup.sh`
-`sed -i "s/checkout_remote/\#checkout_remote/g" setup.sh`
+`git clone https://github.com/westpa/westpa.git
+git checkout new_hooks
+./setup.sh
+sed -i "s/checkout_remote/\#checkout_remote/g" setup.sh
 
-`cd lib/west_tools`
+cd lib/west_tools
 
-`git checkout recursive_update`
+git checkout recursive_update
 
-`cd ../../`
+cd ../../
 
-`./setup.sh`
+./setup.sh
 
 In the CH4/CH4 example, symlink or copy in the main wexplore directory (from the root).
 
-`./init.sh`
-`./run.sh`
+`./init.sh
+./run.sh`
