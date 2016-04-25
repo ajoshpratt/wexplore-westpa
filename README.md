@@ -18,20 +18,25 @@ INSTALLATION:
 After cloning, checkout the following branches of WESTPA and WEST_TOOLS:
 
 WESTPA: new_hooks
+
 WEST_TOOLS: recursive_update
 
-Or, after running anaconda
-git clone https://github.com/westpa/westpa.git
-git checkout new_hooks
-./setup.sh
-sed -i "s/checkout_remote/\#checkout_remote/g" setup.sh
+Or, after loading anaconda python:
 
-cd lib/west_tools
-git checkout recursive_update
-cd ../../
-./setup.sh
+`git clone https://github.com/westpa/westpa.git`
+`git checkout new_hooks`
+`./setup.sh`
+`sed -i "s/checkout_remote/\#checkout_remote/g" setup.sh`
+
+`cd lib/west_tools`
+
+`git checkout recursive_update`
+
+`cd ../../`
+
+`./setup.sh`
 
 In the CH4/CH4 example, symlink or copy in the main wexplore directory (from the root).
 
-./init.sh
-./run.sh
+`./init.sh`
+`./run.sh`
