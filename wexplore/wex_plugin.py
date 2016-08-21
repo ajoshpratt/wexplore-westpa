@@ -21,6 +21,7 @@ class WExploreDriver(object):
         if not sim_manager.work_manager.is_master:
                 return
 
+        print(sim_manager)
         self.sim_manager = sim_manager
         self.data_manager = sim_manager.data_manager
         self.system = sim_manager.system
@@ -176,7 +177,7 @@ class WExploreDriver(object):
             if i >= start_index and i < start_index + wexploreMapper.nbins:
                 inmapper.append(final_pcoords[ii])
         assignmentswexplore = wexploreMapper.assign(inmapper)
-        target_counts = wexploreMapper.balance_replicas(self.max_replicas, assignmentswexplore)
+        target_counts = wexploreMapper.balance_replicas(self.max_replicas, assignmentswexplore, self.we_driver)
         total_bins = 0
         for imapper,(i,mapper) in enumerate(self.system.bin_mapper.mapper_list.iteritems()):
             total_bins += mapper['mapper'].nbins

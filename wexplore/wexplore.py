@@ -343,7 +343,7 @@ class WExploreBinMapper(BinMapper):
         self.next_bin_index += 1
         self.add_bin(bin_index, center_ix)
 
-    def balance_replicas(self, max_replicas, assignments):
+    def balance_replicas(self, max_replicas, assignments, we_driver=None):
         '''Given a set of assignments to the lowest level bins in the
         hierarchy, return an array containing the target number of replicas
         per bin after rebalancing such that the total number of replicas is 
@@ -357,11 +357,24 @@ class WExploreBinMapper(BinMapper):
         # Create graph to accumulate replica counts
         G = self.bin_graph.subgraph(self.bin_graph.nodes())
 
+        # Accumulate statistics from the system.
+        nx.set_node_attributes(G, 'weight', 0)
+        for ii,i in enumerate(we_driver.current_iter_segments):
+            try:
+                nix = assignments[ii]
+                G.node[self.level_indices[-1][nix]]['weight'] += i.weight
+            except:
+                # This means we have things in the recycling bin, which is handled by another mapper.
+                pass
+
         # Set min number of replicas for lowest level bin in the hierarchy
         nx.set_node_attributes(G, 'nreplicas', 0)
         for bi in occupied_bins:
             try:
-                G.node[self.level_indices[-1][bi]]['nreplicas'] = 1
+                if G.node[self.level_indices[-1][bi]]['weight'] >= 0.10:
+                    G.node[self.level_indices[-1][bi]]['nreplicas'] = np.ceil(G.node[self.level_indices[-1][bi]]['weight'] / .10)
+                else:
+                    G.node[self.level_indices[-1][bi]]['nreplicas'] = 1
             except:
                 pass
 
@@ -393,6 +406,10 @@ class WExploreBinMapper(BinMapper):
                     nr = available_replicas
                 else:
                     nr = min(available_replicas, pq[1][0] - pq[0][0] + 1)
+#                    for old, nix in pq:
+#                        if G.node[nix]['weight'] >= 0.10:
+                            #print(G.node[nix]['weight'])
+                            
 
                 heapq.heapreplace(pq, (pq[0][0] + nr, pq[0][1]))
                 available_replicas -= nr
