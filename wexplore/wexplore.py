@@ -372,7 +372,7 @@ class WExploreBinMapper(BinMapper):
         for bi in occupied_bins:
             try:
                 if G.node[self.level_indices[-1][bi]]['weight'] >= 0.10:
-                    G.node[self.level_indices[-1][bi]]['nreplicas'] = np.ceil(G.node[self.level_indices[-1][bi]]['weight'] / .10)
+                    G.node[self.level_indices[-1][bi]]['nreplicas'] = int(np.ceil(G.node[self.level_indices[-1][bi]]['weight'] / .10))
                 else:
                     G.node[self.level_indices[-1][bi]]['nreplicas'] = 1
             except:
@@ -398,6 +398,8 @@ class WExploreBinMapper(BinMapper):
 
             pq = [(G.node[nix]['nreplicas'], nix) for nix in nodes if G.node[nix]['nreplicas'] > 0]
             heapq.heapify(pq)
+            pq_removed = []
+            heapq.heapify(pq_removed)
 
             available_replicas = level_max_replicas - sum(p[0] for p in pq)
 
@@ -406,13 +408,20 @@ class WExploreBinMapper(BinMapper):
                     nr = available_replicas
                 else:
                     nr = min(available_replicas, pq[1][0] - pq[0][0] + 1)
-#                    for old, nix in pq:
-#                        if G.node[nix]['weight'] >= 0.10:
-                            #print(G.node[nix]['weight'])
+                    # As we're working with this on the heap...
+                    # ... the indices change everytime we update the heap.
+                    # The current weight filter is hard coded for the P53/MDM2 simulation
+                    # Based on the dissociation time.
+                    if G.node[pq[0][1]]['weight'] <= float(1e-16) and G.node[pq[0][1]]['weight'] != 0:
+                        # We need to remove it from the heap, in that case, and then rerun the logic.
+                        heapq.heappush(pq_removed, heapq.heappop(pq))
+                        removed = True
+                    else:
+                        heapq.heapreplace(pq, (pq[0][0] + nr, pq[0][1]))
+                        available_replicas -= nr
+            pq = [(nr, nix) for nr, nix in heapq.merge(pq, pq_removed)]
                             
 
-                heapq.heapreplace(pq, (pq[0][0] + nr, pq[0][1]))
-                available_replicas -= nr
 
             if li < self.n_levels - 1:
                 for nr, nix in pq:
